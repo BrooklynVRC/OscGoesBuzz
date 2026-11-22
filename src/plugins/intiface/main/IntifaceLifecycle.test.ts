@@ -31,7 +31,7 @@ test('Intiface supplies stable handles, its own config and resolved frames', () 
     assert.equal(first.output, endpoint);
     assert.equal(next.output, endpoint);
     assert.equal(first.inputs, inputs);
-    assert.deepEqual(first.settings, {enabled: false, linear: undefined});
+    assert.deepEqual(first.settings, {enabled: false, linear: undefined, intensity: undefined});
     assert.deepEqual(Array.from(plugin.getOutputConfigs()), [ownConfig]);
 });
 

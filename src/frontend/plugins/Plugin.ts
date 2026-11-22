@@ -14,6 +14,8 @@ import type {OutputDeviceInfo, SettingsStatePayload} from '../../common/applicat
 
 export interface OutputPresentation {
     name?: string;
+    /** Replaces the plugin name shown under the output name (e.g. battery or model). */
+    subtitle?: ReactNode;
     alerts: {severity: AlertColor; content: ReactNode}[];
 }
 
@@ -62,6 +64,8 @@ export interface PluginPage {
 export interface FrontendPlugin {
     id: string;
     name: string;
+    /** Lower values render their settings section first. Defaults to 0. */
+    order?: number;
     createOutput?(id: string): OutputConfig;
     OutputEditor?: ComponentType<OutputEditorProps>;
     Settings?: ComponentType<PluginSettingsProps>;
