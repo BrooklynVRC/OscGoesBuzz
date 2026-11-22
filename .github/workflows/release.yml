@@ -1,0 +1,131 @@
+name: Release
+
+# Push a tag like v1.0.0 to build and publish a release.
+# Or run it by hand from the Actions tab and type a version.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 1.0.1'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tagName: ${{ steps.v.outputs.tagName }}
+    steps:
+      - id: v
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then VERSION="${INPUT_VERSION#v}"; else VERSION="${REF_NAME#v}"; fi
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "Not a valid version: $VERSION"; exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tagName=v$VERSION" >> "$GITHUB_OUTPUT"
+
+  build_win:
+    needs: [version]
+    runs-on: ubuntu-24.04
+    container:
+      image: electronuserland/builder:wine
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+      - name: Build
+        run: |
+          pnpm install --frozen-lockfile --config.platform=win32
+          pnpm run build
+          pnpm exec electron-builder \
+            --win nsis portable \
+            --config.extraMetadata.version="$VERSION" \
+            --config.nsis.artifactName="OscGoesBuzz-windows-setup-${VERSION}.exe" \
+            --config.portable.artifactName="OscGoesBuzz-windows-portable-${VERSION}.exe"
+        env:
+          HOME: /root
+          VERSION: ${{ needs.version.outputs.version }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: |
+            dist/OscGoesBuzz-windows-setup-${{ needs.version.outputs.version }}.exe
+            dist/OscGoesBuzz-windows-portable-${{ needs.version.outputs.version }}.exe
+
+  build_linux:
+    needs: [version]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+      - name: Install rpm build tools
+        run: sudo apt-get update && sudo apt-get install -y rpm
+      - name: Build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+          pnpm exec electron-builder \
+            --linux AppImage rpm \
+            --config.extraMetadata.version="$VERSION" \
+            --config.appImage.artifactName="OscGoesBuzz-linux-${VERSION}.AppImage" \
+            --config.rpm.artifactName="OscGoesBuzz-linux-${VERSION}.rpm"
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux
+          path: |
+            dist/OscGoesBuzz-linux-${{ needs.version.outputs.version }}.AppImage
+            dist/OscGoesBuzz-linux-${{ needs.version.outputs.version }}.rpm
+
+  release:
+    needs: [version, build_win, build_linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: windows
+          path: windows
+      - uses: actions/download-artifact@v8
+        with:
+          name: linux
+          path: linux
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.version.outputs.tagName }}
+          target_commitish: ${{ github.sha }}
+          name: OscGoesBuzz ${{ needs.version.outputs.version }}
+          prerelease: ${{ contains(needs.version.outputs.version, '-') }}
+          body: |
+            ## Downloads
+            - **Windows (recommended):** `OscGoesBuzz-windows-setup-${{ needs.version.outputs.version }}.exe`
+            - **Windows, no install:** `OscGoesBuzz-windows-portable-${{ needs.version.outputs.version }}.exe`
+            - **Linux:** `.AppImage` or `.rpm`
+
+            ## What's new in OscGoesBuzz
+            - Lovense Game Mode support (no Intiface needed), multi-motor toys, battery & status
+            - Intensity-following patterns: Pulse, Wave, Heartbeat, Fireworks, Earthquake, plus Lovense presets
+            - Per-device intensity range and response curve
+            - Stop all button, global stop hotkey (Ctrl+Shift+Space) and master intensity
+          files: |
+            windows/OscGoesBuzz-windows-setup-${{ needs.version.outputs.version }}.exe
+            windows/OscGoesBuzz-windows-portable-${{ needs.version.outputs.version }}.exe
+            linux/OscGoesBuzz-linux-${{ needs.version.outputs.version }}.AppImage
+            linux/OscGoesBuzz-linux-${{ needs.version.outputs.version }}.rpm

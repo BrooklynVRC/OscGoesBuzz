@@ -146,7 +146,7 @@ export default function Settings() {
                                                 await invokeIpc('updater:install');
                                                 return;
                                             }
-                                            window.open(updateAvailable.downloadUrl ?? "https://osc.toys", "_blank");
+                                            window.open(updateAvailable.downloadUrl ?? "https://github.com/BrooklynVRC/OscGoesBuzz/releases", "_blank");
                                         }}
                                     >
                                         {updateAvailable.status === 'downloading'
