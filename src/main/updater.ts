@@ -25,6 +25,33 @@ interface AvailableUpdateInfo {
     status: 'downloading' | 'installIpc' | 'download' | 'error';
 }
 
+/** OscGoesBuzz updates come from this fork's GitHub releases, not the upstream manifest. */
+const UPDATE_REPOSITORY = 'BrooklynVRC/OscGoesBuzz';
+
+interface GithubRelease {
+    tag_name: string;
+    html_url: string;
+    assets: {name: string; browser_download_url: string}[];
+}
+
+async function fetchLatestRelease(): Promise<UpdatesJsonSchema> {
+    const raw = await got(`https://api.github.com/repos/${UPDATE_REPOSITORY}/releases/latest`, {
+        headers: {'Accept': 'application/vnd.github+json', 'User-Agent': 'OscGoesBuzz-updater'},
+    }).json() as unknown;
+    const release = typia.assert<GithubRelease>(raw);
+    const asset = (pattern: RegExp) => release.assets.find(item => pattern.test(item.name))?.browser_download_url;
+    const windowsSetup = asset(/windows-setup-.*\.exe$/);
+    const windowsPortable = asset(/windows-portable-.*\.exe$/);
+    return {
+        latestVersion: release.tag_name.replace(/^v/, ''),
+        downloadUrls: {
+            generic: release.html_url,
+            ...(windowsSetup ? {windowsSetup} : {}),
+            ...(windowsPortable ? {windowsPortable} : {}),
+        },
+    };
+}
+
 @Service()
 export default class Updater {
     private availableUpdate?: AvailableUpdateInfo;
@@ -56,8 +83,7 @@ export default class Updater {
 
         const myversion = app.getVersion();
 
-        const updatesJson = await got('https://updates.osc.toys/updates.json').json() as unknown;
-        const updates = typia.assert<UpdatesJsonSchema>(updatesJson);
+        const updates = await fetchLatestRelease();
         console.log("Autoupdate version is " + updates.latestVersion);
 
         if (semver.gte(myversion, updates.latestVersion, { loose: true })) {
@@ -99,7 +125,7 @@ export default class Updater {
 
                 console.log("Downloading update in background ...");
                 const localPath = await tmpPromise.tmpName({
-                    prefix: "OGB-update-",
+                    prefix: "OscGoesBuzz-update-",
                     postfix: ".exe"
                 });
                 await stream.pipeline(got.stream(downloadUrl), createWriteStream(localPath));
