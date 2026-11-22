@@ -32,7 +32,7 @@ export default class IntifacePlugin extends Plugin {
             yield {
                 output,
                 inputs: resolve(config?.links ?? [], output.type === 'linear'),
-                settings: {enabled: config?.enabled, linear: config?.linear},
+                settings: {enabled: config?.enabled, linear: config?.linear, intensity: config?.intensity},
             };
         }
     }

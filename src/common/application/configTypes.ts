@@ -11,6 +11,8 @@ export interface OutputConfig {
     plugin: string;
     id: string;
     enabled?: boolean;
+    /** Intensity shaping shared by every plugin's vibrate/rotate outputs. */
+    intensity?: Engine.OutputIntensityConfig;
     /** Shared boundary: device settings belong to this plugin; each link belongs to its own plugin. */
     links: OutputLink[];
 }

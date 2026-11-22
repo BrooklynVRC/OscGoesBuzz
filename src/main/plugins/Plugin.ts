@@ -6,6 +6,7 @@ import type {OutputConfig} from '../../common/application/configTypes';
 import type {SettingsStatePayload} from '../../common/application/ipcContract';
 import type OutputController from '../OutputController';
 import type {PluginContext} from './PluginContext';
+import type {OutputSettings} from '../../common/configTypes';
 
 export abstract class Plugin {
     abstract readonly id: string;
@@ -16,6 +17,8 @@ export abstract class Plugin {
     getOutputs(resolve: ResolveLinks): Iterable<OutputFrame> { return []; }
     getOutputConfigs(): Iterable<OutputConfig> { return []; }
     afterUpdate(outputLevel: number): void {}
+    /** Lets a plugin apply cross-cutting rules (such as a global stop) to every output's settings each tick. */
+    adjustOutputSettings(settings: OutputSettings): OutputSettings { return settings; }
 }
 
 /** Register a concrete singleton and expose that same instance in the plugin collection. */

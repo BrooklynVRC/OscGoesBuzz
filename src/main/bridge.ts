@@ -55,7 +55,8 @@ export default class Bridge {
         let maxLevel = 0;
         for (const frame of frames) {
             const controller = this.outputs.get(frame.output)!;
-            controller.update(frame.inputs, frame.settings);
+            const settings = this.plugins.reduce((current, plugin) => plugin.adjustOutputSettings(current), frame.settings);
+            controller.update(frame.inputs, settings);
             maxLevel = Math.max(maxLevel, controller.lastLevel);
         }
         for (const plugin of this.plugins) plugin.afterUpdate(maxLevel);

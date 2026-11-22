@@ -4,6 +4,7 @@ import type {OutputSettings} from '../common/configTypes';
 import {planPosition, type PositionPlannerState} from './positionPlanner';
 import {evaluateRoutes, type LinkResult, type ResolvedLink} from './routing';
 import clamp from '../common/clamp';
+import {shapeIntensity} from '../common/intensity';
 
 export default class OutputController {
     private routedOutput: LinkResult = {output: 0, backward: false};
@@ -67,7 +68,7 @@ export default class OutputController {
             }
             this.positionState = plan.nextState;
         } else {
-            level = clamp(level, 0, 1);
+            level = shapeIntensity(level, settings.intensity, now);
 
             if (this.output.type == 'rotate') {
                 this.output.setLevel(level * (backward ? -1 : 1));

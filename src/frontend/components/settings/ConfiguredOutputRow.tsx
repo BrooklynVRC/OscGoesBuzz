@@ -6,6 +6,8 @@ import {Delete as DeleteIcon, Label as LabelIcon, Waves as WavesIcon} from "@mui
 import MyAccordion from "../util/MyAccordion";
 import ConnectionBubble from "./ConnectionBubble";
 import OutputLinks from "./OutputLinks";
+import IntensityEditor from "./IntensityEditor";
+import LevelMeter from "./LevelMeter";
 import {atom, type Atom, type PrimitiveAtom, useAtom, useAtomValue} from "jotai";
 import {selectAtom} from "jotai/utils";
 import {focusKeyAtom} from "../../utils/atomUtils";
@@ -60,12 +62,13 @@ function ConfiguredOutputRow({outputAtom, infoAtom, onDelete}: Props) {
                         <Stack sx={{minWidth: 0}}>
                             <Typography variant="h6" sx={{lineHeight: 1.25}} noWrap>{displayName}</Typography>
                             <Typography variant="caption" color="textDisabled" sx={{fontSize: '0.65rem', lineHeight: 1.25}} noWrap>
-                                {plugin?.name ?? 'Plugin Unavailable'}
+                                {presentation?.subtitle ?? plugin?.name ?? 'Plugin Unavailable'}
                             </Typography>
                         </Stack>
                     </Stack>
                     <Stack direction="row" spacing={1} sx={{alignItems: 'center'}}>
-                        {outputPercent > 0 && (
+                        {info?.connected && !info.showLinearActuatorOptions && <LevelMeter level={info.currentLevel} />}
+                        {info?.connected && info.showLinearActuatorOptions && outputPercent > 0 && (
                             <Stack direction="row" spacing={0.25} sx={{alignItems: 'center'}}>
                                 <WavesIcon sx={{fontSize: 14, color: 'text.secondary'}} />
                                 <Typography variant="body2" color="text.secondary">{outputPercent}%</Typography>
@@ -108,6 +111,7 @@ function ConfiguredOutputRow({outputAtom, infoAtom, onDelete}: Props) {
                 {Editor
                     ? <Editor outputAtom={outputAtom} infoAtom={infoAtom} />
                     : <OutputLinks linksAtom={linksAtom} linkLevelsAtom={inactiveLinkLevelsAtom} />}
+                {Editor && !info?.showLinearActuatorOptions && <IntensityEditor outputAtom={outputAtom} />}
             </Stack>
         </MyAccordion>
     );
